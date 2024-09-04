@@ -1,6 +1,5 @@
-# data_manager.py
 import sqlite3
-from datetime import datetime  # Asegúrate de tener esta línea
+from datetime import datetime, timedelta
 
 class DataManager:
     def __init__(self, db_name='finanzas.db'):
@@ -56,3 +55,38 @@ class DataManager:
             ingresos = self.conn.execute('SELECT SUM(monto) FROM ingresos WHERE strftime("%m", fecha_hora) = ?', (mes,)).fetchone()[0] or 0
             egresos = self.conn.execute('SELECT SUM(monto) FROM egresos WHERE strftime("%m", fecha_hora) = ?', (mes,)).fetchone()[0] or 0
         return ingresos, egresos
+
+    def get_registros_filtrados(self, filtro):
+        with self.conn:
+            if filtro == 'dia':
+                fecha_inicio = datetime.now().strftime("%Y-%m-%d")
+                query = '''SELECT 'ingreso' as tipo, nombre, monto, fecha_hora FROM ingresos WHERE date(fecha_hora) = ?
+                           UNION
+                           SELECT 'egreso' as tipo, nombre, monto, fecha_hora FROM egresos WHERE date(fecha_hora) = ?'''
+                params = (fecha_inicio, fecha_inicio)
+
+            elif filtro == 'semana':
+                fecha_inicio = (datetime.now() - timedelta(days=datetime.now().weekday())).strftime("%Y-%m-%d")
+                query = '''SELECT 'ingreso' as tipo, nombre, monto, fecha_hora FROM ingresos WHERE date(fecha_hora) BETWEEN ? AND date('now')
+                           UNION
+                           SELECT 'egreso' as tipo, nombre, monto, fecha_hora FROM egresos WHERE date(fecha_hora) BETWEEN ? AND date('now')'''
+                params = (fecha_inicio, fecha_inicio)
+
+            elif filtro == 'año':
+                fecha_inicio = datetime.now().strftime("%Y")
+                query = '''SELECT 'ingreso' as tipo, nombre, monto, fecha_hora FROM ingresos WHERE strftime("%Y", fecha_hora) = ?
+                           UNION
+                           SELECT 'egreso' as tipo, nombre, monto, fecha_hora FROM egresos WHERE strftime("%Y", fecha_hora) = ?'''
+                params = (fecha_inicio, fecha_inicio)
+
+            else:  # Mes por defecto
+                fecha_inicio = datetime.now().strftime("%Y-%m")
+                query = '''SELECT 'ingreso' as tipo, nombre, monto, fecha_hora FROM ingresos WHERE strftime("%Y-%m", fecha_hora) = ?
+                           UNION
+                           SELECT 'egreso' as tipo, nombre, monto, fecha_hora FROM egresos WHERE strftime("%Y-%m", fecha_hora) = ?'''
+                params = (fecha_inicio, fecha_inicio)
+
+            registros = self.conn.execute(query, params).fetchall()
+
+        return [{'tipo': tipo, 'nombre': nombre, 'monto': monto, 'fecha_hora': fecha_hora} for tipo, nombre, monto, fecha_hora in registros]
+
