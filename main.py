@@ -170,11 +170,29 @@ class ResumenScreen(Screen):
         self.chart_image = Label()  # Placeholder para la imagen del gráfico
         self.layout.add_widget(self.chart_image)
 
+        # Filtro por día, semana, mes, año
+        self.filtro = Spinner(
+            text='Mes',
+            values=('Día', 'Semana', 'Mes', 'Año'),
+            size_hint=(None, None),
+            size=(100, 44),
+        )
+        self.filtro.bind(text=self.actualizar_lista)
+        self.layout.add_widget(self.filtro)
+
+        # Lista de ingresos y egresos
+        self.lista = BoxLayout(orientation='vertical')
+        self.layout.add_widget(self.lista)
+
         btn_inicio = Button(text="Volver al Inicio")
         btn_inicio.bind(on_press=self.go_to_inicio)
         self.layout.add_widget(btn_inicio)
 
     def on_enter(self):
+        self.actualizar_resumen()
+        self.actualizar_lista(self.filtro, self.filtro.text)
+
+    def actualizar_resumen(self):
         ingresos, egresos = data_manager.get_ingresos_egresos_por_mes(f'{self.mes_actual:02}')
         dinero_disponible = ingresos - egresos
         self.dinero_disponible.text = f"Dinero Disponible: ${dinero_disponible}"
@@ -190,6 +208,28 @@ class ResumenScreen(Screen):
         plt.close()
 
         self.chart_image.text = 'resumen_pie_chart.png'  # Actualizar la imagen del gráfico
+
+    def actualizar_lista(self, spinner, texto):
+        # Limpiar lista actual
+        self.lista.clear_widgets()
+
+        # Obtener datos filtrados según la opción seleccionada
+        if texto == 'Día':
+            registros = data_manager.get_registros_filtrados('dia')
+        elif texto == 'Semana':
+            registros = data_manager.get_registros_filtrados('semana')
+        elif texto == 'Año':
+            registros = data_manager.get_registros_filtrados('año')
+        else:  # Mes por defecto
+            registros = data_manager.get_registros_filtrados('mes')
+
+        for registro in registros:
+            icon_color = '#4CAF50' if registro['tipo'] == 'ingreso' else '#F44336'
+            item = BoxLayout(orientation='horizontal', spacing=10)
+            icon = Label(text='●', color=(1, 0, 0, 1) if icon_color == '#F44336' else (0, 1, 0, 1))
+            item.add_widget(icon)
+            item.add_widget(Label(text=f"{registro['nombre']}, ${registro['monto']}"))
+            self.lista.add_widget(item)
 
     def on_touch_move(self, touch):
         if touch.x < touch.ox:
