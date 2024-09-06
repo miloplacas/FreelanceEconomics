@@ -227,9 +227,20 @@ class ResumenScreen(Screen):
             icon_color = '#4CAF50' if registro['tipo'] == 'ingreso' else '#F44336'
             item = BoxLayout(orientation='horizontal', spacing=10)
             icon = Label(text='●', color=(1, 0, 0, 1) if icon_color == '#F44336' else (0, 1, 0, 1))
+
+            # Botón que muestra los detalles del registro
+            btn_nombre = Button(text=f"{registro['nombre']}, ${registro['monto']}")
+            btn_nombre.bind(on_press=lambda instance, reg=registro: self.mostrar_detalles(reg))
+
             item.add_widget(icon)
-            item.add_widget(Label(text=f"{registro['nombre']}, ${registro['monto']}"))
+            item.add_widget(btn_nombre)
             self.lista.add_widget(item)
+
+    def mostrar_detalles(self, registro):
+        detalle_screen = DetalleItemScreen(registro, name='detalle')
+        self.manager.add_widget(detalle_screen)
+        self.manager.transition = SlideTransition(direction="left")
+        self.manager.current = 'detalle'
 
     def on_touch_move(self, touch):
         if touch.x < touch.ox:
@@ -242,6 +253,29 @@ class ResumenScreen(Screen):
     def go_to_inicio(self, instance):
         self.manager.transition = SlideTransition(direction="right")
         self.manager.current = 'inicio'
+
+
+class DetalleItemScreen(Screen):
+    def __init__(self, item, **kwargs):
+        super(DetalleItemScreen, self).__init__(**kwargs)
+        self.layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
+        self.add_widget(self.layout)
+
+        # Mostrar los detalles del item
+        self.layout.add_widget(Label(text=f"Nombre: {item['nombre']}", font_size='18sp'))
+        self.layout.add_widget(Label(text=f"Monto: ${item['monto']}", font_size='18sp'))
+        self.layout.add_widget(Label(text=f"Tipo: {'Ingreso' if item['tipo'] == 'ingreso' else 'Egreso'}", font_size='18sp'))
+        self.layout.add_widget(Label(text=f"Fecha y Hora: {item['fecha_hora']}", font_size='18sp'))
+
+        # Botón para volver al resumen
+        btn_volver = Button(text="Volver al Resumen")
+        btn_volver.bind(on_press=self.go_back)
+        self.layout.add_widget(btn_volver)
+
+    def go_back(self, instance):
+        self.manager.transition = SlideTransition(direction="right")
+        self.manager.current = 'resumen'
+
 
 class MiApp(App):
     def build(self):
